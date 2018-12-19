@@ -135,6 +135,16 @@ if [ "${SOURCE_CODE_TYPE}" == "UBOOT_WITH_DOTCONFIG" -o "${SOURCE_CODE_TYPE}" ==
     KERNEL_HEADER_WORK_DIR=kernel_valid_header_files
 
     KERNEL_VALID_HEADER_FILES=
+    
+    # generate config header
+    rm -f ${DIR_TO_BE_COUNT}/define_config.h
+    for line in `cat ${DIR_TO_BE_COUNT}/.config`
+    do
+        if [ "${line:0-2}" = "=y" ]; then
+            echo "#define ${line:0:0-2}" >> ${DIR_TO_BE_COUNT}/define_config.h
+        fi
+    done
+    echo "${DIR_TO_BE_COUNT}/define_config.h" >> "${VALID_SRC}"
 
     # Get kernel version
     VER=`head -n 3 ${DIR_TO_BE_COUNT}/Makefile | awk -F'=' '{print $2}'`
@@ -168,12 +178,18 @@ if [ "${SOURCE_CODE_TYPE}" == "UBOOT_WITH_DOTCONFIG" -o "${SOURCE_CODE_TYPE}" ==
     File_Not_Exist=
     Index=0
     for files in `echo "${KERNEL_VALID_SRC_FILES}" | sed -e 's/\ /\n/g'`; do
+        if [ "$files"x == "rm"x -o "$files"x == "-f"x ];then
+            continue
+        fi
         DIR_OF_FILES=`dirname "${files}"`
         #echo "${KERNEL_VALID_SRC_FILES}"  dirnames=${DIR_OF_FILES}
         if [ ! -e "${DIR_TO_BE_COUNT}"/"${files}" ]; then
             File_Not_Exist+="${DIR_TO_BE_COUNT}"/"${files}" 
             File_Not_Exist+=" "
             #echo "File not found: ${Echo_Red_Text}"${DIR_TO_BE_COUNT}"/"${files}" ${Echo_Color_Reset}"
+            continue
+        fi
+        if [ "${files:0-2}" = ".o" ]; then
             continue
         fi
         echo "${files}" >> "${VALID_SRC}"
@@ -183,8 +199,9 @@ if [ "${SOURCE_CODE_TYPE}" == "UBOOT_WITH_DOTCONFIG" -o "${SOURCE_CODE_TYPE}" ==
     done
 
     if [ -n "${File_Not_Exist}" ]; then
-        #echo "${Echo_Red_Text}Some files not found, please check:${Echo_Color_Reset}"
-        echo "${File_Not_Exist}" | sed -e 's/\ /\n/g' 
+        echo
+        echo "${Echo_Red_Text}Some files not found, please check${Echo_Color_Reset}"
+        #echo "${File_Not_Exist}" | sed -e 's/\ /\n/g' 
     fi
 
     #######################################################################
